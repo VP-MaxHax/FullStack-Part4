@@ -1,0 +1,31 @@
+{
+  "name": "fullstack-part4",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "build:ui": "powershell -Command \"Remove-Item -Recurse -Force dist; cd ./frontend; npm run build; Copy-Item -Recurse dist ..\"",
+    "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && git push",
+    "test": "node --test",
+    "lint": "eslint ."
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "lodash": "^4.17.21",
+    "mongoose": "^8.5.0",
+    "morgan": "^1.10.0",
+    "nodemon": "^3.1.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.7.0",
+    "@stylistic/eslint-plugin-js": "^2.3.0",
+    "eslint": "^9.7.0",
+    "globals": "^15.8.0"
+  }
+}
