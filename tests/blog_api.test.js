@@ -6,11 +6,21 @@ const app = require('../app')
 const api = supertest(app)
 const helper = require('./test_helper')
 const Blog = require('../models/blog')
+const User = require('../models/user')
+const bcrypt = require('bcrypt')
 const blog = require('../models/blog')
 
 beforeEach(async () => {
+    await User.deleteMany({})
+    const passwordHash = await bcrypt.hash('sekret', 10)
+    const user = new User({ username: 'root', passwordHash })
+    await user.save()
     await Blog.deleteMany({})
-    await Blog.insertMany(helper.initialBlogs)
+    const blogObjects = helper.initialBlogs.map(blog => {
+        blog.user = user._id
+        return new Blog(blog)
+    })
+    await Blog.insertMany(blogObjects)
 })
 
 test('blogs are returned as json', async () => {
@@ -31,16 +41,23 @@ test('id is defined', async () => {
   assert.strictEqual(response.body[0].id, "5a422a851b54a676234d17f7")
 })
 
-test('a valid blog can be added ', async () => {
+test.only('a valid blog can be added ', async () => {
   const newBlog = {
     title: "Tieteetön blogi",
     author: "Matti Meikäläinen",
     url: "http://www.tieteetonblogi.fi",
     likes: 0,
   }
+
+  const token = await helper.getAuthToken(api);
+
+  console.log(token)
+
   await api
   .post('/api/blogs')
   .send(newBlog)
+  .set({Authorization: `Bearer ${token}`})
+  .expect(201)
 
   const response = await api.get('/api/blogs')  
   const title = response.body.map(r => r.title)  
@@ -48,15 +65,20 @@ test('a valid blog can be added ', async () => {
   assert(title.includes('Tieteetön blogi'))
 })
 
-test('likes default to 0', async () => {
+test.only('likes default to 0', async () => {
   const newBlog = {
     title: "Tieteetön blogi",
     author: "Matti Meikäläinen",
     url: "http://www.tieteetonblogi.fi",
   }
+
+  const token = await helper.getAuthToken(api);
+
   await api
   .post('/api/blogs')
   .send(newBlog)
+  .set('Authorization', `Bearer ${token}`)
+  .expect(201)
 
   const response = await api.get('/api/blogs')
   const title = response.body.map(r => r.title)
@@ -65,39 +87,51 @@ test('likes default to 0', async () => {
   assert.strictEqual(likes[6], 0)
 })
 
-test('blog title is required', async () => {
+test.only('blog title is required', async () => {
   const newBlog = {
     author: "Matti Meikäläinen",
     url: "http://www.tieteetonblogi.fi",
-  }
+  };
+
+  const token = await helper.getAuthToken(api);
+
   await api
-  .post('/api/blogs')
-  .send(newBlog)
-  .expect(400)
+    .post('/api/blogs')
+    .send(newBlog)
+    .set('Authorization', `Bearer ${token}`)
+    .expect(400);
 
-  const response = await api.get('/api/blogs')
-  assert.strictEqual(response.body.length, helper.initialBlogs.length)
-})
+  const response = await api.get('/api/blogs');
+  assert.strictEqual(response.body.length, helper.initialBlogs.length);
+});
 
-test('blog url is required', async () => {
+test.only('blog url is required', async () => {
   const newBlog = {
     title: "Tieteetön blogi",
     author: "Matti Meikäläinen",
   }
+
+  const token = await helper.getAuthToken(api);
+
   await api
   .post('/api/blogs')
   .send(newBlog)
+  .set('Authorization', `Bearer ${token}`)
   .expect(400)
 
   const response = await api.get('/api/blogs')
   assert.strictEqual(response.body.length, helper.initialBlogs.length)
 })
 
-test('succeeds with status code 204 if id is valid', async () => {
+test.only('succeeds with status code 204 if id is valid', async () => {
   const blogsAtStart = await helper.blogsInDb()
   const blogToDelete = blogsAtStart[0]
+
+  const token = await helper.getAuthToken(api);
+
   await api
     .delete(`/api/blogs/${blogToDelete.id}`)
+    .set('Authorization', `Bearer ${token}`)
     .expect(204)
 
   const blogsAtEnd = await helper.blogsInDb()
